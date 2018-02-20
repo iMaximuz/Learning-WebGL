@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL</title>
+    
+    <style>
+        html, body {
+          width: 100%;
+          height: 100%;
+          margin: 0px;
+          border: 0;
+          overflow: hidden; /*  Disable scrollbars */
+          display: block;  /* No floating content on sides */
+        }
+
+        canvas {
+            box-sizing: border-box;
+            border-style: none;
+            margin: 0px;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+    
+</head>
+<body>
+    <canvas width="500px"; height="500px">HTML5 Canvas is not supported on your browser</canvas>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="gl-matrix-min.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+
+    <!-- 
+        Cambiamos la version de webgl a webgl2
+        Esto significa que podemos usar la version "300 es" de los shaders
+
+        Podemos asignarles las locaciones especificas a cada atributo, con:
+            layout(location = 0) in vec3 a_position;
+        o podemos hacerlo con javascript usando:
+            gl.bindAttribLocation(someProgram, 0, "a_position");
+
+     -->
+    <script id="shader-vs" type="x-shader/x-vertex">#version 300 es
+        in vec3 a_position;
+        in vec4 a_color;
+      
+        uniform mat4 u_perspective;
+        uniform mat4 u_modelView;
+      
+        out vec4 fragColor;
+        void main(void) {
+            fragColor = a_color;
+            gl_Position = u_perspective * u_modelView * vec4(a_position, 1.0);
+        }
+    </script>
+    <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
+        precision mediump float;
+        
+        in vec4 fragColor;
+
+        out vec4 outputColor;
+        void main(void) {
+            outputColor = fragColor;
+        }
+    </script>
+</body>
+</html>
