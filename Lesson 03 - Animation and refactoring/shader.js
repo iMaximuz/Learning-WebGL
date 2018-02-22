@@ -7,11 +7,14 @@ class Shader{
         let vs = this._createShader(gl.VERTEX_SHADER, this.vsSource);
         let fs = this._createShader(gl.FRAGMENT_SHADER, this.fsSource);
         this.program = this._createProgram(vs, fs);
+        this.attributes = this._getAttributeLocations(['a_position', 'a_color']);
+        this.uniforms = this._getUniformLocations(['u_model', 'u_view', 'u_perspective']);
+        this.binded = false;
     }
 
     _createShader(type, source){
         let shader = gl.createShader(type);
-        gl.shaderSource(source);
+        gl.shaderSource(shader, source);
         gl.compileShader(shader);
         let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
         if(!success){
@@ -24,14 +27,14 @@ class Shader{
 
     _createProgram(vertexShader, fragmentShader){
         let program = gl.createProgram();
-        gl.attachShader(vertexShader);
-        gl.attachShader(fragmentShader);
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
 
-        gl.bindAttribLocation(shaderProgram, 0, "a_position" );
-        gl.bindAttribLocation(shaderProgram, 1, "a_color" );
+        gl.bindAttribLocation(program, 0, "a_position" );
+        gl.bindAttribLocation(program, 1, "a_color" );
 
         gl.linkProgram(program);
-        let success = gl.getProgramParameter(shader, gl.LINK_STATUS);
+        let success = gl.getProgramParameter(program, gl.LINK_STATUS);
         if(!success){
             console.error(gl.getPrograInfoLog(program))
             gl.deleteProgram(program);
@@ -40,79 +43,39 @@ class Shader{
         return program;
     }
 
-    getAttributeLocation(attribName){
-        return gl.getAttribLocation(this.program, attribName);
+    _getLocations(type, values){
+        let result = {};
+        for(let name of values){
+            let location;
+            if(type == 'attribute')
+                location = gl.getAttribLocation(this.program, name);
+            else if(type == 'uniform')
+                location = gl.getUniformLocation(this.program, name);
+            result[name] = location;
+        }
+        return result;
     }
 
-    getUniformLocation(uniformName){
-        return gl.getUniformLocation(this.program, uniformName);
+    _getAttributeLocations(attributes){
+        return this._getLocations('attribute', attributes);
+    }
+
+    _getUniformLocations(uniforms){
+        return this._getLocations('uniform', uniforms);
     }
 
     setMatrixUniforms(mModel, mView, mPerspective){
-        gl.uniformMatrix4fv(this.getUniformLocation("u_model"), false, mModel);
-        gl.uniformMatrix4fv(this.getUniformLocation("u_view"), false, mView);
-        gl.uniformMatrix4fv(this.getUniformLocation("u_perspective"), false, mPerspective);
-    }
-}
-
-function setMatrixUniforms(shaderProgram, perspectiveMatrix, modelViewMatrix) {
-    gl.uniformMatrix4fv(shaderProgram.perspMatUniform, false, perspectiveMatrix);
-    gl.uniformMatrix4fv(shaderProgram.modelViewMatUniform, false, modelViewMatrix);
-}
-
-function getShader(gl, id){
-
-    let shaderScript = $('#'+id);
-    if(!shaderScript)
-        return null;
-    
-    let shaderText = shaderScript.text();
-    let shaderType = shaderScript.attr('type');
-
-    let shader;
-    if(shaderType == "x-shader/x-fragment"){
-        shader = gl.createShader(gl.FRAGMENT_SHADER);
-    } else if(shaderType == "x-shader/x-vertex"){
-        shader = gl.createShader(gl.VERTEX_SHADER);
-    } else {
-        return null;
+        gl.uniformMatrix4fv(this.uniforms["u_model"], false, mModel);
+        gl.uniformMatrix4fv(this.uniforms["u_view"], false, mView);
+        gl.uniformMatrix4fv(this.uniforms["u_perspective"], false, mPerspective);
     }
 
-    gl.shaderSource(shader, shaderText);
-    gl.compileShader(shader);
-
-    if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
-        console.error(gl.getShaderInfoLog(shader));
-        return null;
+    bind(){
+        gl.useProgram(this.program);
+        this.binded = true;
     }
-
-    return shader;
-}
-
-function initShaders() {
-
-    let fragmentShader = getShader(gl, "shader-fs");
-    let vertexShader = getShader(gl, "shader-vs");
-
-    let shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-
-    
-
-    gl.linkProgram(shaderProgram);
-
-    if(!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
-        console.error("Could not initialize shaders");
-    
-    gl.useProgram(shaderProgram);
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "a_position");
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
-    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "a_color");
-    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
-
-    shaderProgram.perspMatUniform = gl.getUniformLocation(shaderProgram, "u_perspective");
-    shaderProgram.modelViewMatUniform = gl.getUniformLocation(shaderProgram, "u_modelView");
-    return shaderProgram;
+    unbind(){
+        gl.useProgram(null);
+        this.binded = false;
+    }
 }

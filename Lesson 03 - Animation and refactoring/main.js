@@ -1,80 +1,39 @@
 var gl;
-let shaderProgram;
+let shader;
+let mModel = mat4.create();
+let mView = mat4.create();
+let mPerspective = mat4.create();
+
 function webGLStart(){
     let canvas = $('canvas')[0];
     gl = glInit(canvas);
-    shaderProgram = initShaders();
-    initBuffers(shaderProgram);
+    let vs = getShaderSource("shader-vs");
+    let fs = getShaderSource("shader-fs");
+    shader = new Shader(vs, fs);
+
+    initBuffers(shader);
 
     gl.clearColor(0.12, 0.19, 0.31, 1.0);
     gl.enable(gl.DEPTH_TEST);
     
+
+    shader.bind();
     glLoop(loop);
 }
 
 function loop(dt){
     gl.resize();
-    drawScene(shaderProgram);
+    drawScene(dt, shader);
 }
 
-function getShader(gl, id){
-
+function getShaderSource(id){
     let shaderScript = $('#'+id);
     if(!shaderScript)
-        return null;
+        return "";
     
     let shaderText = shaderScript.text();
-    let shaderType = shaderScript.attr('type');
-
-    let shader;
-    if(shaderType == "x-shader/x-fragment"){
-        shader = gl.createShader(gl.FRAGMENT_SHADER);
-    } else if(shaderType == "x-shader/x-vertex"){
-        shader = gl.createShader(gl.VERTEX_SHADER);
-    } else {
-        return null;
-    }
-
-    gl.shaderSource(shader, shaderText);
-    gl.compileShader(shader);
-
-    if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
-        console.error(gl.getShaderInfoLog(shader));
-        return null;
-    }
-
-    return shader;
+    return shaderText;
 }
-
-function initShaders() {
-
-    let fragmentShader = getShader(gl, "shader-fs");
-    let vertexShader = getShader(gl, "shader-vs");
-
-    let shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-
-    gl.bindAttribLocation(shaderProgram, 0, "a_position" );
-    gl.bindAttribLocation(shaderProgram, 1, "a_color" );
-
-    gl.linkProgram(shaderProgram);
-
-    if(!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
-        console.error("Could not initialize shaders");
-    
-    gl.useProgram(shaderProgram);
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "a_position");
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
-    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "a_color");
-    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
-
-    shaderProgram.perspMatUniform = gl.getUniformLocation(shaderProgram, "u_perspective");
-    shaderProgram.modelViewMatUniform = gl.getUniformLocation(shaderProgram, "u_modelView");
-    return shaderProgram;
-}
-
 // VAO = Vertex array buffer
 // VBO = Vertex buffer object
 // EBO = Element buffer object (indices)
@@ -96,7 +55,7 @@ function initBuffers(shaderProgram) {
     triangleVBO.itemSize = 7; // Number of floats per vertex
     triangleVBO.numItems = 3; // Number of vertex
     gl.vertexAttribPointer(
-        shaderProgram.vertexPositionAttribute, // Attribute location
+        shader.attributes['a_position'], // Attribute location
         3, // Number of elements per attribute
         gl.FLOAT, // Type of element
         false, // Normalized
@@ -104,15 +63,15 @@ function initBuffers(shaderProgram) {
         0 // Offset from the begining of a  single vertex to this attribute
     );
     gl.vertexAttribPointer(
-        shaderProgram.vertexColorAttribute, // Attribute location
+        shader.attributes['a_color'], // Attribute location
         4, // Number of elements per attribute
         gl.FLOAT, // Type of element
         false, // Normalized
         triangleVBO.itemSize * Float32Array.BYTES_PER_ELEMENT, // Size of an individual vertex
         3 * Float32Array.BYTES_PER_ELEMENT// Offset from the begining of a  single vertex to this attribute
     );
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+    gl.enableVertexAttribArray(shader.attributes['a_position']);
+    gl.enableVertexAttribArray(shader.attributes['a_color']);
 
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -141,7 +100,7 @@ function initBuffers(shaderProgram) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareEBO);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
     gl.vertexAttribPointer(
-        shaderProgram.vertexPositionAttribute, // Attribute location
+        shader.attributes['a_position'], // Attribute location
         3, // Number of elements per attribute
         gl.FLOAT, // Type of element
         false, // Normalized
@@ -149,43 +108,47 @@ function initBuffers(shaderProgram) {
         0 // Offset from the begining of a  single vertex to this attribute
     );
     gl.vertexAttribPointer(
-        shaderProgram.vertexColorAttribute, // Attribute location
+        shader.attributes['a_color'], // Attribute location
         4, // Number of elements per attribute
         gl.FLOAT, // Type of element
         false, // Normalized
         squareVBO.itemSize * Float32Array.BYTES_PER_ELEMENT, // Size of an individual vertex
         3 * Float32Array.BYTES_PER_ELEMENT// Offset from the begining of a  single vertex to this attribute
     );
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+    gl.enableVertexAttribArray(shader.attributes['a_position']);
+    gl.enableVertexAttribArray(shader.attributes['a_color']);
 
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 }
 
-function setMatrixUniforms(shaderProgram, perspectiveMatrix, modelViewMatrix) {
-    gl.uniformMatrix4fv(shaderProgram.perspMatUniform, false, perspectiveMatrix);
-    gl.uniformMatrix4fv(shaderProgram.modelViewMatUniform, false, modelViewMatrix);
-}
 
-function drawScene(shaderProgram) {
-    
+let rot = 0;
+let zoom = 0;
+let t = 0;
+function drawScene(dt, shader) {
+    t += dt;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    mat4.identity(mModel);
+    mat4.identity(mView);
 
-    let perspectiveMat = mat4.create();
-    let modelViewMat = mat4.create();
+    zoom = 45 + (Math.sin(t) * 30);
+    mat4.perspective(mPerspective, glMatrix.toRadian(zoom), gl.canvas.width / gl.canvas.height, 0.1, 100.0);
 
-    mat4.perspective(perspectiveMat, glMatrix.toRadian(45), gl.canvas.width / gl.canvas.height, 0.1, 100.0);
-    mat4.identity(modelViewMat);
+    let radians = glMatrix.toRadian(rot);
+    rot += 20 * dt;
+    mat4.translate(mModel, mModel, [-1.5, 0.0, -7.0]);
+    mat4.rotateX(mModel, mModel, radians);    
+    shader.setMatrixUniforms(mModel, mView, mPerspective);
 
-    mat4.translate(modelViewMat, modelViewMat, [-1.5, 0.0, -7.0]);
-    
-    setMatrixUniforms(shaderProgram, perspectiveMat, modelViewMat);
     gl.bindVertexArray(triangleVAO);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     
-    mat4.translate(modelViewMat, modelViewMat, [3.0, 0.0, 0.0]);
-    setMatrixUniforms(shaderProgram, perspectiveMat, modelViewMat);
+    mat4.identity(mModel);
+    mat4.translate(mModel, mModel, [1.5, 0.0, -7.0]);
+    mat4.rotateY(mModel, mModel, radians);
+    shader.setMatrixUniforms(mModel, mView, mPerspective);
+
     gl.bindVertexArray(squareVAO);
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 

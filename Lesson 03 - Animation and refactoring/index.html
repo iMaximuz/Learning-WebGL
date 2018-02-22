@@ -31,6 +31,7 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript" src="webgl.js"></script>
     <script type="text/javascript" src="gl-matrix-min.js"></script>
+    <script type="text/javascript" src="shader.js"></script>    
     <script type="text/javascript" src="main.js"></script>
 
     <!-- 
@@ -47,13 +48,14 @@
         in vec3 a_position;
         in vec4 a_color;
       
+        uniform mat4 u_model;
+        uniform mat4 u_view;
         uniform mat4 u_perspective;
-        uniform mat4 u_modelView;
       
         out vec4 fragColor;
         void main(void) {
             fragColor = a_color;
-            gl_Position = u_perspective * u_modelView * vec4(a_position, 1.0);
+            gl_Position = u_perspective * u_view * u_model * vec4(a_position, 1.0);
         }
     </script>
     <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
