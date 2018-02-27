@@ -2,4 +2,4 @@
 Personal learning process of WebGL
 
 Sources:
-- [http://webglfundamentals.org](WebGLFundamentals)
+- [WebGL2 Fundamentals](https://webgl2fundamentals.org)
