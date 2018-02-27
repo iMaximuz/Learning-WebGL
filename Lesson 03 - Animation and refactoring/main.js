@@ -7,43 +7,20 @@ let mPerspective = mat4.create();
 let triangleMesh;
 let squareMesh;
 
+let g_vertex_layout = [];
+
 function webGLStart(){
     let canvas = $('canvas')[0];
     gl = glInit(canvas);
     let vs = getShaderSource("shader-vs");
     let fs = getShaderSource("shader-fs");
-    shader = new Shader(vs, fs);
+    shader = new Shader(vs, fs);  
 
-    let vertices = [
-        //position          color
-        0.0, 1.0, 0.0,      1.0, 0.0, 0.0, 1.0,
-        -1.0, -1.0, 0.0,    0.0, 1.0, 0.0, 1.0,
-        1.0, -1.0, 0.0,     0.0, 0.0, 1.0, 1.0,
-    ];
+    g_vertex_layout.push(new AttributePointer ('position', 0, 3, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 0));
+    g_vertex_layout.push(new AttributePointer ('color', 1, 4, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT));
 
-    let layout = [
-        new AttributePointer ('position', 0, 3, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 0),
-        new AttributePointer ('color', 1, 4, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT)
-    ];
-
-    let vertexArray = new VertexArray(vertices, 3, layout);
-    triangleMesh = new Mesh(vertexArray);
-
-    vertices = [
-        //position          color
-        1.0, 1.0, 0.0,      1.0, 0.5, 0.2, 1.0, // top right
-        1.0, -1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // bottom right
-        -1.0, -1.0, 0.0,    1.0, 0.5, 0.2, 1.0, // bottom left
-        -1.0, 1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // top left
-    ];
-
-    let indices = [
-        0, 1, 3,
-        1, 2, 3
-    ]
-
-    vertexArray = new VertexArray(vertices, 4, layout);
-    squareMesh = new Mesh(vertexArray, indices);
+    triangleMesh = generateTriangleMesh();
+    squareMesh = generateSquareMesh();
 
     gl.clearColor(0.12, 0.19, 0.31, 1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -51,6 +28,33 @@ function webGLStart(){
 
     shader.bind();
     glLoop(loop);
+}
+
+function generateTriangleMesh(){
+    let vertices = [
+        //position          color
+        0.0, 1.0, 0.0,      1.0, 0.0, 0.0, 1.0,
+        -1.0, -1.0, 0.0,    0.0, 1.0, 0.0, 1.0,
+        1.0, -1.0, 0.0,     0.0, 0.0, 1.0, 1.0,
+    ];
+    let vertexArray = new VertexArray(vertices, 3, g_vertex_layout);
+    return new Mesh(vertexArray);
+}
+
+function generateSquareMesh(){
+    let vertices = [
+        //position          color
+        1.0, 1.0, 0.0,      1.0, 0.5, 0.2, 1.0, // top right
+        1.0, -1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // bottom right
+        -1.0, -1.0, 0.0,    1.0, 0.5, 0.2, 1.0, // bottom left
+        -1.0, 1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // top left
+    ];
+    let indices = [
+        0, 1, 3,
+        1, 2, 3
+    ]
+    let vertexArray = new VertexArray(vertices, 4, g_vertex_layout);
+    return new Mesh(vertexArray, indices);
 }
 
 function loop(dt){
