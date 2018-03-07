@@ -6,21 +6,32 @@ let mPerspective = mat4.create();
 
 let triangleMesh;
 let squareMesh;
+let cubeMesh;
 
-let g_vertex_layout = [];
+let G_VERTEX_LAYOUT;
 
 function webGLStart(){
     let canvas = $('canvas')[0];
     gl = glInit(canvas);
+    
+    G_VERTEX_LAYOUT = [
+        { 
+            name: 'position', 
+            attribute: new AttributePointer (0, 3, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 0)
+        },
+        { 
+            name: 'color', 
+            attribute: new AttributePointer (1, 4, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT)
+        }
+    ];
+
     let vs = getShaderSource("shader-vs");
     let fs = getShaderSource("shader-fs");
-    shader = new Shader(vs, fs);  
+    shader = new Shader(vs, fs); 
 
-    g_vertex_layout.push(new AttributePointer ('position', 0, 3, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 0));
-    g_vertex_layout.push(new AttributePointer ('color', 1, 4, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT));
-
-    triangleMesh = generateTriangleMesh();
-    squareMesh = generateSquareMesh();
+    triangleMesh = Geometry.Triangle();
+    squareMesh = Geometry.Square();
+    cubeMesh = Geometry.Box(1, 2, 1);
 
     gl.clearColor(0.12, 0.19, 0.31, 1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -28,33 +39,6 @@ function webGLStart(){
     gl.cullFace(gl.BACK);
     shader.bind();
     glLoop(loop);
-}
-
-function generateTriangleMesh(){
-    let vertices = [
-        //position          color
-        0.0, 1.0, 0.0,      1.0, 0.0, 0.0, 1.0,
-        -1.0, -1.0, 0.0,    0.0, 1.0, 0.0, 1.0,
-        1.0, -1.0, 0.0,     0.0, 0.0, 1.0, 1.0,
-    ];
-    let vertexArray = new VertexArray(vertices, 3, g_vertex_layout);
-    return new Mesh(vertexArray);
-}
-
-function generateSquareMesh(){
-    let vertices = [
-        //position          color
-        1.0, 1.0, 0.0,      1.0, 0.5, 0.2, 1.0, // top right
-        1.0, -1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // bottom right
-        -1.0, -1.0, 0.0,    1.0, 0.5, 0.2, 1.0, // bottom left
-        -1.0, 1.0, 0.0,     1.0, 0.5, 0.2, 1.0, // top left
-    ];
-    let indices = [
-        0, 3, 1,
-        1, 3, 2
-    ]
-    let vertexArray = new VertexArray(vertices, 4, g_vertex_layout);
-    return new Mesh(vertexArray, indices);
 }
 
 function loop(dt){
@@ -97,6 +81,14 @@ function drawScene(dt, shader) {
     shader.setMatrixUniforms(mModel, mView, mPerspective);
 
     squareMesh.render(gl.TRIANGLES);
+
+    mat4.identity(mModel);
+    mat4.translate(mModel, mModel, [0.0, 0.0, -7.0]);
+    mat4.rotateY(mModel, mModel, radians);
+    shader.setMatrixUniforms(mModel, mView, mPerspective);
+
+    cubeMesh.render(gl.TRIANGLES);
+
 }
 
 $(document).ready(webGLStart);
