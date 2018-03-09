@@ -7,24 +7,98 @@ class Shader{
         let vs = this._createShader(gl.VERTEX_SHADER, this.vsSource);
         let fs = this._createShader(gl.FRAGMENT_SHADER, this.fsSource);
         this.program = this._createProgram(vs, fs);
-        this.attributes = this._getAttributeLocations(['a_position', 'a_color']);
-        this.uniforms = this._getUniformLocations(['u_model', 'u_view', 'u_perspective']);
+        this.attributes = Object.assign({}, this._getAttributeLocations(['a_position', 'a_color']));
+        this.uniforms = Object.assign({}, this._getUniformLocations(['u_model', 'u_view', 'u_perspective']));
         this.binded = false;
     }
 
     setMatrixUniforms(mModel, mView, mPerspective){
-        gl.uniformMatrix4fv(this.uniforms["u_model"], false, mModel);
-        gl.uniformMatrix4fv(this.uniforms["u_view"], false, mView);
-        gl.uniformMatrix4fv(this.uniforms["u_perspective"], false, mPerspective);
+        this.setMatrix4("u_model", mModel);
+        this.setMatrix4("u_view", mView);
+        this.setMatrix4("u_perspective", mPerspective);        
+    }
+
+    setFloat(name, value){
+        let location = this._getOrAddUniform(name);
+        if (location !== null){
+            gl.uniform1f(location, value);
+        }
+    }
+
+    setInt(name, value){
+        let location = this._getOrAddUniform(name);
+        if (location !== null){
+            gl.uniform1f(location, value);
+        }
+    }
+
+    setVecf(name, value){
+        let location = this._getOrAddUniform(name);
+        if (location !== null){
+            switch(value.length){
+                case 1:
+                    gl.uniform1fv(location, value);
+                    break;
+                case 2:
+                    gl.uniform2fv(location, value);
+                    break;
+                case 3:
+                    gl.uniform3fv(location, value);
+                    break;
+                case 4:
+                    gl.uniform4fv(location, value);
+                    break;
+            }
+        }
+    }
+
+    setVeci(name, value){
+        let location = this._getOrAddUniform(name);
+        if (location !== null){
+            switch(value.length){
+                case 1:
+                    gl.uniform1iv(location, value);
+                    break;
+                case 2:
+                    gl.uniform2iv(location, value);
+                    break;
+                case 3:
+                    gl.uniform3iv(location, value);
+                    break;
+                case 4:
+                    gl.uniform4iv(location, value);
+                    break;
+            }
+        }
+    }
+
+    setMatrix4(name, value){
+        let location = this._getOrAddUniform(name);
+        if (location !== null){
+            gl.uniformMatrix4fv(location, false, value);
+        }
     }
 
     bind(){
-        gl.useProgram(this.program);
-        this.binded = true;
+        if(!this.binded){
+            gl.useProgram(this.program);
+            this.binded = true;
+        }
     }
     unbind(){
         gl.useProgram(null);
         this.binded = false;
+    }
+
+    _getOrAddUniform(name){
+        if(!this.uniforms[name] && this.uniforms[name] !== null ){
+            let uniform = this._getUniformLocation(name);
+            this.uniforms = Object.assign(this.uniforms, uniform);
+            if (uniform[name] === null){
+                console.warn("No uniform with name " + name + " was found.");
+            }
+        }
+        return this.uniforms[name];
     }
 
     _createShader(type, source){
@@ -58,24 +132,43 @@ class Shader{
         return program;
     }
 
-    _getLocations(type, values){
+    _getLocation(type, name){
         let result = {};
-        for(let name of values){
-            let location;
-            if(type == 'attribute')
-                location = gl.getAttribLocation(this.program, name);
-            else if(type == 'uniform')
-                location = gl.getUniformLocation(this.program, name);
-            result[name] = location;
+        let location;
+
+        if(type == 'attribute')
+            location = gl.getAttribLocation(this.program, name);
+        else if(type == 'uniform')
+            location = gl.getUniformLocation(this.program, name);
+
+        result[name] = location;
+        return result;
+    }
+
+    _getAttributeLocation(attribute){
+        return this._getLocation('attribute', attribute);
+    }
+
+    _getAttributeLocations(attributes){
+        let result = {};
+        for(let attribute of attributes){
+            let location = this._getAttributeLocation(attribute);
+            result = Object.assign(result, location);
         }
         return result;
     }
 
-    _getAttributeLocations(attributes){
-        return this._getLocations('attribute', attributes);
+    _getUniformLocation(uniform){
+        return this._getLocation('uniform', uniform);
     }
 
     _getUniformLocations(uniforms){
-        return this._getLocations('uniform', uniforms);
+        let result = {};
+        for(let uniform of uniforms){
+            let location = this._getUniformLocation(uniform);
+            if(location)
+                result = Object.assign(result, location);
+        }
+        return result;
     }
 }
