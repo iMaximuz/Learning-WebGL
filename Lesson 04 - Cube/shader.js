@@ -13,9 +13,9 @@ class Shader{
     }
 
     setMatrixUniforms(mModel, mView, mPerspective){
-        this.setMatrix4("u_model", mModel);
-        this.setMatrix4("u_view", mView);
-        this.setMatrix4("u_perspective", mPerspective);        
+        this.setMatrix("u_model", mModel);
+        this.setMatrix("u_view", mView);
+        this.setMatrix("u_perspective", mPerspective);
     }
 
     setFloat(name, value){
@@ -48,6 +48,9 @@ class Shader{
                 case 4:
                     gl.uniform4fv(location, value);
                     break;
+                default:
+                    console.warn(`Vector length ${value.length} is not supported `);
+                    break;
             }
         }
     }
@@ -68,14 +71,30 @@ class Shader{
                 case 4:
                     gl.uniform4iv(location, value);
                     break;
+                default:
+                    console.warn(`Vector length ${value.length} is not supported `);
+                    break;
             }
         }
     }
 
-    setMatrix4(name, value){
+    setMatrix(name, value){
         let location = this._getOrAddUniform(name);
         if (location !== null){
-            gl.uniformMatrix4fv(location, false, value);
+            switch(value.length){
+                case 4:
+                    gl.uniformMatrix2fv(location, false, value);
+                    break;
+                case 9:
+                    gl.uniformMatrix3fv(location, false, value);
+                    break;
+                case 16:
+                    gl.uniformMatrix4fv(location, false, value);
+                    break;
+                default:
+                    console.warn(`Matrix length ${value.length} is not supported `);
+                    break;
+            }
         }
     }
 
